@@ -1,0 +1,37 @@
+name: Build practice report PR
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'practice_report_build/**'
+      - '.github/workflows/build-practice-report-pr.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install python-docx pillow requests
+      - name: Build DOCX
+        run: python practice_report_build/generate_report.py
+      - name: Validate DOCX
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          p=Path('practice_report_build/output/report_practice_pm01_trubacheva_ev.docx')
+          assert p.exists() and p.stat().st_size > 10000
+          with ZipFile(p) as z:
+              assert z.testzip() is None
+              assert 'word/document.xml' in z.namelist()
+          print(p, p.stat().st_size)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: practice-report-docx
+          path: practice_report_build/output/report_practice_pm01_trubacheva_ev.docx
